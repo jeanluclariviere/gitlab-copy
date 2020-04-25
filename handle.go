@@ -1,11 +1,6 @@
 package main
 
-import (
-	"log"
-	"net/http"
-)
-
-func handle() {
+/* func handle(req *http.Request, t string) {
 	client := http.Client{}
 	uri, token := fetchCredentials()
 
@@ -16,7 +11,7 @@ func handle() {
 		"overwrite": "false",
 	}
 
-	req := importFile(uri, extraParams, "file", path)
+	req = importFile(uri, extraParams, "file", path)
 	req.Header.Add("PRIVATE-TOKEN", token)
 
 	resp, err := client.Do(req)
@@ -25,4 +20,8 @@ func handle() {
 	}
 
 	printResponse(resp)
-}
+} */
+
+// scheduleExport
+// exportDownload
+// import

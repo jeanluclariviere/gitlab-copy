@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -10,27 +11,72 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"syscall"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type credentials struct {
-	URI   string `json:"uri"`
-	Token string `json:"token"`
+	ExportURI   string `json:"exportUri"`
+	ExportToken string `json:"exportToken"`
+	ImportURI   string `json:"importUri"`
+	ImportToken string `json:"importToken"`
 }
 
-func storeCredentials(uri, token string) error {
-	hd, _ := os.UserHomeDir()
-	dir := hd + "/.gitlab-migrate"
-	fdir := dir + "/config.json"
+var hd, _ = os.UserHomeDir()
+var dir = hd + "/.gitlab-migrate"
+var fdir = dir + "/config.json"
 
+func setup() {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("export uri: ")
+	exportURI, _ := reader.ReadString('\n')
+	exportURI = strings.TrimSuffix(exportURI, "\n")
+
+	fmt.Print("export token: ")
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		log.Fatal(err)
+	}
+	exportToken := string(bytePassword)
+
+	// print empty line
+	fmt.Println("")
+
+	fmt.Print("import uri: ")
+	importURI, _ := reader.ReadString('\n')
+	importURI = strings.TrimSuffix(importURI, "\n")
+
+	fmt.Print("import token: ")
+	bytePassword, err = terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	importToken := string(bytePassword)
+
+	c := credentials{
+		ExportURI:   exportURI,
+		ExportToken: exportToken,
+		ImportURI:   importURI,
+		ImportToken: importToken,
+	}
+
+	storeCredentials(c)
+	fetchCredentials()
+	auth(c.ExportURI, c.ExportToken)
+	auth(c.ImportURI, c.ImportToken)
+}
+
+func storeCredentials(c credentials) error {
 	os.Mkdir(dir, 0744)
 
-	token = base64.StdEncoding.EncodeToString([]byte(token))
+	c.ExportToken = base64.StdEncoding.EncodeToString([]byte(c.ExportToken))
+	c.ImportToken = base64.StdEncoding.EncodeToString([]byte(c.ImportToken))
 
-	creds := credentials{
-		URI:   uri,
-		Token: token,
-	}
-	bs, err := json.MarshalIndent(creds, "", "\t")
+	bs, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		return err
 	}
@@ -40,67 +86,40 @@ func storeCredentials(uri, token string) error {
 		return err
 	}
 
-	fmt.Printf("WARNING! Your token will be stored unencrypted in  %v\n", fdir)
+	fmt.Printf("WARNING! Your tokens will be stored unencrypted in  %v\n", fdir)
 	return nil
 }
 
-func fetchCredentials() (string, string) {
-	hd, _ := os.UserHomeDir()
-	dir := hd + "/.gitlab-migrate"
-	fdir := dir + "/config.json"
-
+func fetchCredentials() credentials {
 	bs, err := ioutil.ReadFile(fdir)
 	if err != nil {
-		log.Fatalf("No credentials found in %v, please login", fdir)
+		log.Fatalf("No credentials found in %v, please run setup", fdir)
 	}
 
 	var creds credentials
 
 	json.Unmarshal(bs, &creds)
 
-	dt, err := base64.StdEncoding.DecodeString(creds.Token)
+	de, err := base64.StdEncoding.DecodeString(creds.ExportToken)
 	if err != nil {
 		log.Fatal(err)
 	}
+	creds.ExportToken = string(de)
 
-	return creds.URI, string(dt)
-}
-
-func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false, nil
+	di, err := base64.StdEncoding.DecodeString(creds.ImportToken)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return err != nil, err
-}
+	creds.ImportToken = string(di)
 
-func login(uri, token string) {
-	hd, _ := os.UserHomeDir()
-	dir := hd + "/.gitlab-migrate"
-	fdir := dir + "/config.json"
-
-	if _, err := os.Stat(fdir); err == nil {
-		// path exists
-		if uri != "" && token != "" {
-			storeCredentials(uri, token)
-			uri, token = fetchCredentials()
-		} else {
-			uri, token = fetchCredentials()
-		}
-	} else if os.IsNotExist(err) {
-		// path does not exist
-		storeCredentials(uri, token)
-		uri, token = fetchCredentials()
-	}
-
-	auth(uri, token)
+	return creds
 }
 
 func auth(uri, token string) {
 	client := http.Client{}
-	u := uri + "/api/v4/projects"
-	req, err := http.NewRequest("GET", u, nil)
+	url := uri + "/api/v4/projects"
 
+	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Add("PRIVATE-TOKEN", token)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -119,8 +138,47 @@ func auth(uri, token string) {
 	json.Unmarshal(body, &m)
 
 	if m.Message == "401 Unauthorized" {
-		log.Fatalf("Login failed, %v", m.Message)
+		log.Println("Login to", uri, "failed:", m.Message)
 	} else {
-		fmt.Println("Login successful")
+		fmt.Println("Login to,", uri, "successful.")
 	}
 }
+
+func login() credentials {
+	if _, err := os.Stat(fdir); os.IsNotExist(err) {
+		// path does not exist
+		setup()
+		return fetchCredentials()
+
+	}
+
+	return fetchCredentials()
+}
+
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return err != nil, err
+}
+
+/* func login(uri, token string) {
+
+
+	if _, err := os.Stat(fdir); err == nil {
+		// path exists
+		if uri != "" && token != "" {
+			storeCredentials(uri, token)
+			uri, token = fetchCredentials()
+		} else {
+			uri, token = fetchCredentials()
+		}
+	} else if os.IsNotExist(err) {
+		// path does not exist
+		storeCredentials(uri, token)
+		uri, token = fetchCredentials()
+	}
+
+	auth(uri, token)
+} */
