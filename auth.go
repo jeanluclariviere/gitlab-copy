@@ -28,6 +28,8 @@ var hd, _ = os.UserHomeDir()
 var dir = hd + "/.gitlab-migrate"
 var fdir = dir + "/config.json"
 
+const unauthorizedError = "401 Unauthorized"
+
 func setup() {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -137,7 +139,7 @@ func auth(uri, token string) {
 
 	json.Unmarshal(body, &m)
 
-	if m.Message == "401 Unauthorized" {
+	if m.Message == unauthorizedError {
 		log.Println("Login to", uri, "failed:", m.Message)
 	} else {
 		fmt.Println("Login to,", uri, "successful.")
