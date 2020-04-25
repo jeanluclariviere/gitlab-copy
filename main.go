@@ -2,6 +2,23 @@
 
 package main
 
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+)
+
 func main() {
-	login("", "")
+
+	//login("", "")
+	handle()
+}
+
+func printResponse(resp *http.Response) {
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(body))
 }
