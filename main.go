@@ -51,13 +51,12 @@ func migrate(pid, dst string) {
 
 	var r *statusResp
 	var filename string
-	for retry := 0; retry < 9; retry++ {
-		log.Println("Retrieving export status, count:", retry)
+	for {
 		r, _, err = exportStatus(c.ExportURI, c.ExportToken, pid)
 		if err != nil {
 			log.Fatal(err)
 		}
-
+		log.Println("Export status:", r.ExportStatus)
 		if r.ExportStatus == "finished" {
 
 			t := time.Now()
@@ -69,7 +68,6 @@ func migrate(pid, dst string) {
 			}
 			break
 		}
-
 		time.Sleep(10 * time.Second)
 	}
 
@@ -79,4 +77,5 @@ func migrate(pid, dst string) {
 	// import the project
 	log.Println("Importing project")
 	importFile(c.ImportURI, c.ImportToken, gid, r.Path, filename)
+	log.Println("Import complete")
 }
