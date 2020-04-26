@@ -21,12 +21,23 @@ const projects = "/api/v4/projects/"
 const groups = "/api/v4/groups/"
 const alreadyTakenError = `Failed to save group {:path=>["has already been taken"]}`
 
+type groupResp struct {
+	ID      int    `json:"id"`
+	Message string `json:"message"`
+}
+
 func newGroup(uri, token, path string) string {
+	client := http.Client{}
 	URL := uri + groups
+
+	// Create the path slice
 	ps := strings.Split(path, "/")
 	data := url.Values{}
-	client := http.Client{}
-	pid := ""
+	var pid string
+
+	// Range over the path slice and create each group.
+	// If the group already exists, retrieve it's ID
+	// and continue until the full path has been constructed.
 	for i, v := range ps {
 		data.Set("name", v)
 		data.Set("path", v)
@@ -48,22 +59,34 @@ func newGroup(uri, token, path string) string {
 			log.Fatal(err)
 		}
 
-		r := struct {
-			ID      int    `json:"id"`
-			Message string `json:"message"`
-		}{}
+		// ID is returned if the object exists
+		// Message is returned in the event of an error,
+		// including if the group already exists.
+		var r groupResp
 
 		json.Unmarshal(bs, &r)
 
 		if r.Message == "" {
+			// If the group gets created
+			// set the current groups ID as the parent
 			pid = strconv.Itoa(r.ID)
 		} else if r.Message == alreadyTakenError {
+			// If the current group already exists, rebuild the
+			// full_path up to the current value
+			// and retrieve it's ID
 			fp := strings.Join(ps[:i+1], "/")
 			pid = getParentID(uri, token, v, fp)
+		} else {
+			log.Fatal(r.Message)
 		}
 	}
 
 	return pid
+}
+
+type parentResp struct {
+	ID       int    `json:"id"`
+	FullPath string `json:"full_path"`
 }
 
 // getParentID return the parent ID the last group in the path
@@ -72,6 +95,7 @@ func getParentID(uri, token, name, path string) string {
 	client := http.Client{}
 	URL := uri + groups + "?search=" + name
 
+	// Perform the search
 	req, err := http.NewRequest("GET", URL, nil)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -89,15 +113,16 @@ func getParentID(uri, token, name, path string) string {
 		log.Fatal(err)
 	}
 
-	r := []struct {
-		ID       int    `json:"id"`
-		FullPath string `json:"full_path"`
-	}{}
+	// API response struct, condensed.
+	var r []parentResp
 
+	// Unmarshal search response
 	if err := json.Unmarshal(bs, &r); err != nil {
 		log.Fatal(err)
 	}
 
+	// Return the ID from list of responses
+	// where the requested path is equal to the groups full_path
 	for _, v := range r {
 		if v.FullPath == path {
 			return strconv.Itoa(v.ID)
@@ -107,7 +132,7 @@ func getParentID(uri, token, name, path string) string {
 	return ""
 }
 
-func scheduleExport(uri, token, pid string) *http.Response {
+func scheduleExport(uri, token, pid string) (*http.Response, error) {
 	client := http.Client{}
 
 	URL := uri + projects + pid + "/export/"
@@ -118,14 +143,17 @@ func scheduleExport(uri, token, pid string) *http.Response {
 
 	req.Header.Add("PRIVATE-TOKEN", token)
 	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	return resp
+	return resp, err
 }
 
-func exportStatus(uri, token, pid string) *http.Response {
+type statusResp struct {
+	Name         string `json:"name"`
+	Path         string `json:"path"`
+	ExportStatus string `json:"export_status"`
+}
+
+func exportStatus(uri, token, pid string) (*statusResp, *http.Response, error) {
 	client := http.Client{}
 
 	URL := uri + projects + pid + "/export/"
@@ -137,15 +165,23 @@ func exportStatus(uri, token, pid string) *http.Response {
 	req.Header.Add("PRIVATE-TOKEN", token)
 	resp, err := client.Do(req)
 	if err != nil {
+		return nil, resp, err
+	}
+
+	bs, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	return resp
+	var r statusResp
+
+	json.Unmarshal(bs, &r)
+
+	return &r, resp, nil
 }
 
-func exportDownload(uri, token, pid string) *http.Response {
+func exportDownload(uri, token, pid, filename string) *http.Response {
 	client := http.Client{}
-
 	URL := uri + projects + pid + "/export/download"
 	req, err := http.NewRequest("GET", URL, nil)
 	if err != nil {
@@ -157,6 +193,13 @@ func exportDownload(uri, token, pid string) *http.Response {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	out, err := os.Create(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer out.Close()
+	io.Copy(out, resp.Body)
 
 	return resp
 }
