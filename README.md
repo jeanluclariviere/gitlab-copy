@@ -2,10 +2,16 @@
 Gitlab-migrate is a tool to help facilitate the migration of projects from one gitlab environment to another. It decided early on in the project to forgo the use of the `xanzy/go-gitlab` library as their import service is non-functioning.
 
 # Installation
-go install github.com/jeanluclariviere/gitlab-migrate
+go get github.com/jeanluclariviere/gitlab-migrate
+cd $GOPATH/src/github.com/jeanluclariviere/gitlab-migrate
+go install
 
 # Usage
 **WARNING! Gitlab-migrate leverages gitlab api tokens stored unencrypted in the users `~/.gitlab-migrate/config.json` directory. It is highly recommended that the api tokens created for use with gitlab-migrate be set to expire shortly have use and should not be kept for long term purposes. Use at your own discretion!**
+
+## source - project ID
+
+## destination - group/subgroup
 
 ##Setup URIs and tokens: 
 
@@ -25,4 +31,10 @@ Login to https://destination.gitlab.com successful.
 Migrate
 ```
 $gitlab-migrate 100 group/path
+2020/04/26 14:17:59 Scheduling export...
+2020/04/26 14:17:59 Export status: finished
+2020/04/26 14:17:59 Downloading ./04-26-2020-sample.tar.gz
+2020/04/26 14:17:59 Creating groups
+2020/04/26 14:17:59 Importing project
+2020/04/26 14:18:00 Import complete
 ```
