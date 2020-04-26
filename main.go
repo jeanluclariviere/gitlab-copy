@@ -5,31 +5,55 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 )
 
-const u = "http://192.168.0.16:4080"
-const t = "5eoo8jg3aiwyDJN3Z9g8"
-
 func main() {
-	//setup()
-	c := fetchCredentials()
-	//login()
-	newGroup(c.ExportURI, c.ExportToken, "hello/test2")
-	fmt.Println(getParentID(c.ExportURI, c.ExportToken, "test2", "hello/test2"))
 
+	var args []string
+
+	if len(os.Args) > 1 {
+		args = os.Args[1:]
+	} else {
+		fmt.Println(`Usage of ./gitlab-migrate:
+setup                  Initial setup
+login                  Validate credentials
+<pid> <destination>    Migrate <pid> to <destination>`)
+		os.Exit(1)
+	}
+
+	switch args[0] {
+	case "login":
+		login()
+		os.Exit(0)
+	case "setup":
+		setup()
+		os.Exit(0)
+	}
+
+	if len(args) >= 3 {
+		fmt.Println("Too many arguments")
+	} else {
+		migrate(args[0], args[1])
+		os.Exit(0)
+	}
 }
 
 func migrate(pid, dst string) {
 
-	c := login()
+	c := fetchCredentials()
+	log.Println("Scheduling export...")
 	_, err := scheduleExport(c.ExportURI, c.ExportToken, pid)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for retry := 0; retry < 5; retry++ {
-		r, _, err := exportStatus(c.ExportURI, c.ExportToken, pid)
+	var r *statusResp
+	var filename string
+	for retry := 0; retry < 9; retry++ {
+		log.Println("Retrieving export status, count:", retry)
+		r, _, err = exportStatus(c.ExportURI, c.ExportToken, pid)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -37,11 +61,22 @@ func migrate(pid, dst string) {
 		if r.ExportStatus == "finished" {
 
 			t := time.Now()
-			filename := "./" + t.Format("01-02-2006") + "-" + r.Path + "tar.gz"
-			exportDownload(c.ExportURI, c.ExportToken, pid, filename)
+			filename = "./" + t.Format("01-02-2006") + "-" + r.Path + ".tar.gz"
+			log.Println("Downloading", filename)
+			_, err := exportDownload(c.ExportURI, c.ExportToken, pid, filename)
+			if err != nil {
+				log.Fatal(err)
+			}
 			break
 		}
 
 		time.Sleep(10 * time.Second)
 	}
+
+	// create the groups
+	log.Println("Creating groups")
+	gid := newGroup(c.ImportURI, c.ImportToken, dst)
+	// import the project
+	log.Println("Importing project")
+	importFile(c.ImportURI, c.ImportToken, gid, r.Path, filename)
 }

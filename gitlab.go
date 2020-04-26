@@ -26,7 +26,7 @@ type groupResp struct {
 	Message string `json:"message"`
 }
 
-func newGroup(uri, token, path string) string {
+func newGroup(uri, token, path string) (groupID string) {
 	client := http.Client{}
 	URL := uri + groups
 
@@ -91,7 +91,7 @@ type parentResp struct {
 
 // getParentID return the parent ID the last group in the path
 // the full path must be provided
-func getParentID(uri, token, name, path string) string {
+func getParentID(uri, token, name, path string) (parentID string) {
 	client := http.Client{}
 	URL := uri + groups + "?search=" + name
 
@@ -180,7 +180,7 @@ func exportStatus(uri, token, pid string) (*statusResp, *http.Response, error) {
 	return &r, resp, nil
 }
 
-func exportDownload(uri, token, pid, filename string) *http.Response {
+func exportDownload(uri, token, pid, filename string) (*http.Response, error) {
 	client := http.Client{}
 	URL := uri + projects + pid + "/export/download"
 	req, err := http.NewRequest("GET", URL, nil)
@@ -191,7 +191,7 @@ func exportDownload(uri, token, pid, filename string) *http.Response {
 	req.Header.Add("PRIVATE-TOKEN", token)
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return resp, err
 	}
 
 	out, err := os.Create(filename)
@@ -201,16 +201,16 @@ func exportDownload(uri, token, pid, filename string) *http.Response {
 	defer out.Close()
 	io.Copy(out, resp.Body)
 
-	return resp
+	return resp, nil
 }
 
-func importFile(uri, token string, params map[string]string, path string) *http.Response {
+func importFile(uri, token, namespace, path, filename string) *http.Response {
 	client := http.Client{}
 
 	URL := uri + projects + "/import"
 
 	// Open a file
-	file, err := os.Open(path)
+	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func importFile(uri, token string, params map[string]string, path string) *http.
 
 	// Create a new form-data header with the provided field name and file name
 	// And returns an io.writer
-	part, err := writer.CreateFormFile("file", filepath.Base(path))
+	part, err := writer.CreateFormFile("file", filepath.Base(filename))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -236,9 +236,18 @@ func importFile(uri, token string, params map[string]string, path string) *http.
 	// the io.writer
 	_, err = io.Copy(part, file)
 
-	// Adds additional fields to our writer
-	for key, val := range params {
-		_ = writer.WriteField(key, val)
+	// Add additional fields to our writer
+
+	if err = writer.WriteField("path", path); err != nil {
+		log.Fatal(err)
+	}
+
+	if err = writer.WriteField("namespace", namespace); err != nil {
+		log.Fatal(err)
+	}
+
+	if err = writer.WriteField("file", filename); err != nil {
+		log.Fatal(err)
 	}
 
 	// Close the writer now that we are finished

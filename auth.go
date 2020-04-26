@@ -67,7 +67,6 @@ func setup() {
 	}
 
 	storeCredentials(c)
-	fetchCredentials()
 	auth(c.ExportURI, c.ExportToken)
 	auth(c.ImportURI, c.ImportToken)
 }
@@ -146,15 +145,15 @@ func auth(uri, token string) {
 	}
 }
 
-func login() credentials {
+func login() {
 	if _, err := os.Stat(fdir); os.IsNotExist(err) {
 		// path does not exist
 		setup()
-		return fetchCredentials()
-
+	} else {
+		c := fetchCredentials()
+		auth(c.ExportURI, c.ExportToken)
+		auth(c.ImportURI, c.ImportToken)
 	}
-
-	return fetchCredentials()
 }
 
 func exists(path string) (bool, error) {
