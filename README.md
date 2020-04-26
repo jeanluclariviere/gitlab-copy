@@ -2,9 +2,11 @@
 Gitlab-migrate is a tool to help facilitate the migration of projects from one gitlab environment to another. It decided early on in the project to forgo the use of the `xanzy/go-gitlab` library as their import service is non-functioning.
 
 # Installation
+```
 go get github.com/jeanluclariviere/gitlab-migrate
 cd $GOPATH/src/github.com/jeanluclariviere/gitlab-migrate
 go install
+```
 
 # Usage
 **WARNING! Gitlab-migrate leverages gitlab api tokens stored unencrypted in the users `~/.gitlab-migrate/config.json` directory. It is highly recommended that the api tokens created for use with gitlab-migrate be set to expire shortly have use and should not be kept for long term purposes. Use at your own discretion!**
@@ -29,9 +31,9 @@ $ gitlab-migrate 1 hello/world
 
 Imports the project to: `hello/world/example`
 
-##Setup URIs and tokens: 
+## Setup URIs and tokens: 
 
-###Configure credentials
+### Configure credentials
 
 ```
 $gitlab-migrate setup
@@ -54,7 +56,7 @@ Login to https://destination.gitlab.com successful.
 
 ## Migration
 
-###Migrate to a group
+### Migrate to a group
 ```
 $gitlab-migrate 100 group
 2020/04/26 14:17:59 Scheduling export...
@@ -65,7 +67,7 @@ $gitlab-migrate 100 group
 2020/04/26 14:18:00 Import complete
 ```
 
-###Migrate to a subgroup
+### Migrate to a subgroup
 ```
 $gitlab-migrate 100 group/subgroup
 2020/04/26 14:17:59 Scheduling export...
@@ -74,8 +76,9 @@ $gitlab-migrate 100 group/subgroup
 2020/04/26 14:17:59 Creating groups
 2020/04/26 14:17:59 Importing project
 2020/04/26 14:18:00 Import complete
+```
 
-###Migrate to token's owner's projects (ommit the group)
+### Migrate to token's owner's projects (ommit the group)
 ```
 $gitlab-migrate 100 
 2020/04/26 14:17:59 Scheduling export...
@@ -84,3 +87,4 @@ $gitlab-migrate 100
 2020/04/26 14:17:59 Creating groups
 2020/04/26 14:17:59 Importing project
 2020/04/26 14:18:00 Import complete
+```
