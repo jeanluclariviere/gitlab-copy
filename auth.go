@@ -57,6 +57,9 @@ func setup() {
 		log.Fatal(err)
 	}
 
+	// print empty line
+	fmt.Println("")
+
 	importToken := string(bytePassword)
 
 	c := credentials{

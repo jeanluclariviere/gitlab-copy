@@ -242,8 +242,10 @@ func importFile(uri, token, namespace, path, filename string) *http.Response {
 		log.Fatal(err)
 	}
 
-	if err = writer.WriteField("namespace", namespace); err != nil {
-		log.Fatal(err)
+	if namespace != "" {
+		if err = writer.WriteField("namespace", namespace); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if err = writer.WriteField("file", filename); err != nil {

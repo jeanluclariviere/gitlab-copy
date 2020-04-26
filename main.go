@@ -3,7 +3,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -33,20 +35,39 @@ login                  Validate credentials
 	}
 
 	if len(args) >= 3 {
-		fmt.Println("Too many arguments")
-	} else {
+		log.Println("Too many arguments")
+	} else if len(args) == 2 {
 		migrate(args[0], args[1])
 		os.Exit(0)
+	} else if len(args) == 1 {
+		migrate(args[0], "")
 	}
 }
+
+type scheduleResp struct {
+	Message string `json:"message"`
+}
+
+const notFoundError = "404 Project Not Found"
 
 func migrate(pid, dst string) {
 
 	c := fetchCredentials()
 	log.Println("Scheduling export...")
-	_, err := scheduleExport(c.ExportURI, c.ExportToken, pid)
+	resp, err := scheduleExport(c.ExportURI, c.ExportToken, pid)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	bs, err := ioutil.ReadAll(resp.Body)
+
+	//var r scheduleResp
+	var m scheduleResp
+	json.Unmarshal(bs, &m)
+
+	if m.Message == notFoundError {
+		log.Println("Project with PID", pid, "not found.")
+		os.Exit(1)
 	}
 
 	var r *statusResp
@@ -70,12 +91,17 @@ func migrate(pid, dst string) {
 		}
 		time.Sleep(10 * time.Second)
 	}
+	if dst != "" {
+		// create the groups
+		log.Println("Creating groups")
+		gid := newGroup(c.ImportURI, c.ImportToken, dst)
+		// import the project
+		log.Println("Importing project")
+		_ = importFile(c.ImportURI, c.ImportToken, gid, r.Path, filename)
+	} else {
+		log.Println("Importing project")
+		_ = importFile(c.ImportURI, c.ImportToken, dst, r.Path, filename)
+	}
 
-	// create the groups
-	log.Println("Creating groups")
-	gid := newGroup(c.ImportURI, c.ImportToken, dst)
-	// import the project
-	log.Println("Importing project")
-	importFile(c.ImportURI, c.ImportToken, gid, r.Path, filename)
 	log.Println("Import complete")
 }
