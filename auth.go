@@ -142,7 +142,7 @@ func auth(uri, token string) {
 	if m.Message == unauthorizedError {
 		log.Println("Login to", uri, "failed:", m.Message)
 	} else {
-		fmt.Println("Login to,", uri, "successful.")
+		fmt.Println("Login to", uri, "successful.")
 	}
 }
 

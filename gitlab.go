@@ -14,31 +14,72 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 const projects = "/api/v4/projects/"
 const groups = "/api/v4/groups/"
+const alreadyTakenError = `Failed to save group {:path=>["has already been taken"]}`
 
-func newGroup(uri string, params map[string]string) *http.Request {
-	uri = uri + groups
-
+func newGroup(uri, token, path string) string {
+	URL := uri + groups
+	ps := strings.Split(path, "/")
 	data := url.Values{}
-	for k, v := range params {
-		data.Add(k, v)
+	client := http.Client{}
+	pid := ""
+	for i, v := range ps {
+		data.Set("name", v)
+		data.Set("path", v)
+		data.Set("parent_id", pid)
+
+		req, err := http.NewRequest("POST", URL, bytes.NewBufferString(data.Encode()))
+		req.Header.Add("PRIVATE-TOKEN", token)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		bs, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		r := struct {
+			ID      int    `json:"id"`
+			Message string `json:"message"`
+		}{}
+
+		json.Unmarshal(bs, &r)
+
+		if r.Message == "" {
+			pid = strconv.Itoa(r.ID)
+		} else if r.Message == alreadyTakenError {
+			fp := strings.Join(ps[:i+1], "/")
+			pid = getParentID(uri, token, v, fp)
+		}
 	}
 
-	req, err := http.NewRequest("POST", uri, bytes.NewBufferString(data.Encode()))
+	return pid
+}
+
+// getParentID return the parent ID the last group in the path
+// the full path must be provided
+func getParentID(uri, token, name, path string) string {
+	client := http.Client{}
+	URL := uri + groups + "?search=" + name
+
+	req, err := http.NewRequest("GET", URL, nil)
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return req
-}
-
-func searchGroup(uri string, name string) string {
-	uri = uri + groups + "?search=" + name
-
-	resp, err := http.Post("POST", uri, nil)
+	req.Header.Add("PRIVATE-TOKEN", token)
+	resp, err = client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,52 +89,82 @@ func searchGroup(uri string, name string) string {
 		log.Fatal(err)
 	}
 
-	r := struct {
-		ID          int
-		name        string
-		path        string
-		description string
+	r := []struct {
+		ID       int    `json:"id"`
+		FullPath string `json:"full_path"`
 	}{}
 
 	if err := json.Unmarshal(bs, &r); err != nil {
 		log.Fatal(err)
 	}
 
-	return strconv.Itoa(r.ID)
+	for _, v := range r {
+		if v.FullPath == path {
+			return strconv.Itoa(v.ID)
+		}
+	}
+
+	return ""
 }
 
-func scheduleExport(uri, pid string) *http.Request {
-	uri = uri + projects + pid + "/export/"
-	req, err := http.NewRequest("POST", uri, nil)
+func scheduleExport(uri, token, pid string) *http.Response {
+	client := http.Client{}
+
+	URL := uri + projects + pid + "/export/"
+	req, err := http.NewRequest("POST", URL, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return req
-}
-
-func exportStatus(uri, pid string) *http.Request {
-	uri = uri + projects + pid + "/export/"
-	req, err := http.NewRequest("GET", uri, nil)
+	req.Header.Add("PRIVATE-TOKEN", token)
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return req
+	return resp
 }
 
-func exportDownload(uri, pid string) *http.Request {
-	uri = uri + projects + pid + "/export/download"
-	req, err := http.NewRequest("GET", uri, nil)
+func exportStatus(uri, token, pid string) *http.Response {
+	client := http.Client{}
+
+	URL := uri + projects + pid + "/export/"
+	req, err := http.NewRequest("GET", URL, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return req
+	req.Header.Add("PRIVATE-TOKEN", token)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return resp
 }
 
-func importFile(uri string, params map[string]string, path string) *http.Request {
-	uri = uri + projects + "/import"
+func exportDownload(uri, token, pid string) *http.Response {
+	client := http.Client{}
+
+	URL := uri + projects + pid + "/export/download"
+	req, err := http.NewRequest("GET", URL, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.Header.Add("PRIVATE-TOKEN", token)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return resp
+}
+
+func importFile(uri, token string, params map[string]string, path string) *http.Response {
+	client := http.Client{}
+
+	URL := uri + projects + "/import"
 
 	// Open a file
 	file, err := os.Open(path)
@@ -135,8 +206,14 @@ func importFile(uri string, params map[string]string, path string) *http.Request
 	}
 
 	// Create a new request and return it
-	req, err := http.NewRequest("POST", uri, body)
+	req, err := http.NewRequest("POST", URL, body)
 	// You must set the content type
+	req.Header.Add("PRIVATE-TOKEN", token)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	return req
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return resp
 }
