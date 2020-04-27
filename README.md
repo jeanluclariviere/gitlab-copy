@@ -64,7 +64,7 @@ Login to https://destination.gitlab.com successful.
 ### Migrate to a group
 ```
 $ gitlab-copy 100 group
-2020/04/26 14:17:59 Scheduling export...
+2020/04/26 14:17:59 Scheduling export
 2020/04/26 14:17:59 Export status: finished
 2020/04/26 14:17:59 Downloading ./04-26-2020-sample.tar.gz
 2020/04/26 14:17:59 Creating groups
@@ -75,7 +75,7 @@ $ gitlab-copy 100 group
 ### Migrate to a subgroup
 ```
 $ gitlab-copy 100 group/subgroup
-2020/04/26 14:17:59 Scheduling export...
+2020/04/26 14:17:59 Scheduling export
 2020/04/26 14:17:59 Export status: finished
 2020/04/26 14:17:59 Downloading ./04-26-2020-sample.tar.gz
 2020/04/26 14:17:59 Creating groups
@@ -86,7 +86,7 @@ $ gitlab-copy 100 group/subgroup
 ### Migrate to token's owner's projects (ommit the group)
 ```
 $ gitlab-copy 100 
-2020/04/26 14:17:59 Scheduling export...
+2020/04/26 14:17:59 Scheduling export
 2020/04/26 14:17:59 Export status: finished
 2020/04/26 14:17:59 Downloading ./04-26-2020-sample.tar.gz
 2020/04/26 14:17:59 Creating groups
