@@ -53,7 +53,7 @@ const notFoundError = "404 Project Not Found"
 func migrate(pid, dst string) {
 
 	c := fetchCredentials()
-	log.Println("Scheduling export...")
+	log.Println("Scheduling export")
 	resp, err := scheduleExport(c.ExportURI, c.ExportToken, pid)
 	if err != nil {
 		log.Fatal(err)
