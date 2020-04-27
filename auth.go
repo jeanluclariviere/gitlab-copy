@@ -132,6 +132,9 @@ func auth(uri, token string) {
 	url := uri + "/api/v4/projects"
 
 	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	req.Header.Add("PRIVATE-TOKEN", token)
 	resp, err := client.Do(req)
 	if err != nil {
