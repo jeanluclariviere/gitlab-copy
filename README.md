@@ -8,7 +8,7 @@ Gitlab-copy works by performing the following:
 4. Imports the project to the destination gitlab server at the provided namespace, or if none is provided, the user's local projects.
 
 # Gitlab Version
->= Gitlab 12.9.0
+>>= Gitlab 12.9.0
 
 # Installation
 ```
