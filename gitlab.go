@@ -26,6 +26,7 @@ type groupResp struct {
 	Message string `json:"message"`
 }
 
+// newGroup creates a new group, as well as any parent groups.
 func newGroup(uri, token, path string) (groupID string) {
 	client := http.Client{}
 	URL := uri + groups
@@ -132,6 +133,7 @@ func getParentID(uri, token, name, path string) (parentID string) {
 	return ""
 }
 
+// scheduleExport schedules the project export and prepares it for download.
 func scheduleExport(uri, token, pid string) (*http.Response, error) {
 	client := http.Client{}
 
@@ -153,6 +155,7 @@ type statusResp struct {
 	ExportStatus string `json:"export_status"`
 }
 
+// exportStatus checks the export status
 func exportStatus(uri, token, pid string) (*statusResp, *http.Response, error) {
 	client := http.Client{}
 
@@ -180,6 +183,7 @@ func exportStatus(uri, token, pid string) (*statusResp, *http.Response, error) {
 	return &r, resp, nil
 }
 
+// exportDownload will download the exported project to the local directory.
 func exportDownload(uri, token, pid, filename string) (*http.Response, error) {
 	client := http.Client{}
 	URL := uri + projects + pid + "/export/download"
@@ -204,6 +208,8 @@ func exportDownload(uri, token, pid, filename string) (*http.Response, error) {
 	return resp, nil
 }
 
+// Import file uses a multipart file to upload the exported project
+// to the desired namespace.
 func importFile(uri, token, namespace, path, filename string) *http.Response {
 	client := http.Client{}
 
@@ -217,53 +223,50 @@ func importFile(uri, token, namespace, path, filename string) *http.Response {
 	// Close the file on exit
 	defer file.Close()
 
-	//Create a variable sized buffer
-	//of type io writer
 	body := &bytes.Buffer{}
 
-	// Create a multipart writer
-	// that writes to body of type io.writer
+	// Create the multipart writer
 	writer := multipart.NewWriter(body)
 
 	// Create a new form-data header with the provided field name and file name
-	// And returns an io.writer
 	part, err := writer.CreateFormFile("file", filepath.Base(filename))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Copy the contents of the file directly in to part
-	// the io.writer
 	_, err = io.Copy(part, file)
 
 	// Add additional fields to our writer
-
 	if err = writer.WriteField("path", path); err != nil {
 		log.Fatal(err)
 	}
 
+	// Only add the namespace field if it has been provided.
 	if namespace != "" {
 		if err = writer.WriteField("namespace", namespace); err != nil {
 			log.Fatal(err)
 		}
 	}
 
+	// Add the file
 	if err = writer.WriteField("file", filename); err != nil {
 		log.Fatal(err)
 	}
 
-	// Close the writer now that we are finished
-	// adding contents
+	// Close the writer
 	err = writer.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Create a new request and return it
+	// Create a new request
 	req, err := http.NewRequest("POST", URL, body)
 	// You must set the content type
 	req.Header.Add("PRIVATE-TOKEN", token)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)

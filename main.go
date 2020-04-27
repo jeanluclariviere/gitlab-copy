@@ -1,5 +1,3 @@
-// Refactor code to make it easier to test: https://endler.dev/2018/go-io-testing/
-
 package main
 
 import (
@@ -14,7 +12,6 @@ import (
 func main() {
 
 	var args []string
-
 	if len(os.Args) > 1 {
 		args = os.Args[1:]
 	} else {
@@ -50,6 +47,9 @@ type scheduleResp struct {
 
 const notFoundError = "404 Project Not Found"
 
+// migrate performs the migration of the project from the source gitlab
+// server to the destination server, for the given user or at the
+// specified namespace.
 func migrate(pid, dst string) {
 
 	c := fetchCredentials()
@@ -61,7 +61,6 @@ func migrate(pid, dst string) {
 
 	bs, err := ioutil.ReadAll(resp.Body)
 
-	//var r scheduleResp
 	var m scheduleResp
 	json.Unmarshal(bs, &m)
 
@@ -72,7 +71,9 @@ func migrate(pid, dst string) {
 
 	var r *statusResp
 	var filename string
+	// consider not looping forever
 	for {
+		// retrieve the export status
 		r, _, err = exportStatus(c.ExportURI, c.ExportToken, pid)
 		if err != nil {
 			log.Fatal(err)
@@ -83,6 +84,8 @@ func migrate(pid, dst string) {
 			t := time.Now()
 			filename = "./" + t.Format("01-02-2006") + "-" + r.Path + ".tar.gz"
 			log.Println("Downloading", filename)
+
+			// Download the project
 			_, err := exportDownload(c.ExportURI, c.ExportToken, pid, filename)
 			if err != nil {
 				log.Fatal(err)
@@ -91,6 +94,9 @@ func migrate(pid, dst string) {
 		}
 		time.Sleep(10 * time.Second)
 	}
+
+	// if the dst is not empty, create the namespace
+	// otherwise create the project in the token's user's projects.
 	if dst != "" {
 		// create the groups
 		log.Println("Creating groups")

@@ -23,11 +23,14 @@ type credentials struct {
 }
 
 var hd, _ = os.UserHomeDir()
-var dir = hd + "/.gitlab-migrate"
+var dir = hd + "/.gitlab-copy"
 var fdir = dir + "/config.json"
 
 const unauthorizedError = "401 Unauthorized"
 
+// setup is takes user input and populates the config.json
+// used to authenticate against the source and destination
+// gitlab servers.
 func setup() {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -72,6 +75,8 @@ func setup() {
 	auth(c.ImportURI, c.ImportToken)
 }
 
+// storeCredentails stores the source and destination URIs
+// and tokens (unencrypted!) in ~/.gitlab-copy/config.json
 func storeCredentials(c credentials) error {
 	os.Mkdir(dir, 0744)
 
@@ -92,6 +97,8 @@ func storeCredentials(c credentials) error {
 	return nil
 }
 
+// fetchCredentials reads the ~/.gitlab-copy/config.json file
+// and returns the credentials to be used.
 func fetchCredentials() credentials {
 	bs, err := ioutil.ReadFile(fdir)
 	if err != nil {
@@ -117,6 +124,9 @@ func fetchCredentials() credentials {
 	return creds
 }
 
+// auth validates a given URI and token combination
+// by attempting to list all projects
+// returns success if error 401 is not encountered.
 func auth(uri, token string) {
 	client := http.Client{}
 	url := uri + "/api/v4/projects"
@@ -146,6 +156,9 @@ func auth(uri, token string) {
 	}
 }
 
+// login is a high level wrapper around auth which
+// simply validates the existing credentials
+// useful to check if the tokens have not expired.
 func login() {
 	if _, err := os.Stat(fdir); os.IsNotExist(err) {
 		// path does not exist
@@ -157,6 +170,9 @@ func login() {
 	}
 }
 
+// exists is a small helper function
+// which validates whether or not
+// a path/file exists.
 func exists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
