@@ -4,7 +4,7 @@ Gitlab-copy is a tool to help facilitate the copying of projects from one gitlab
 Gitlab-copy works by performing the following:
 1. Schedule a project for export on the source gitlab server
 2. Checks the export status until it is set to "finnished"
-3. Downloads the the export locally
+3. Downloads the project locally
 4. Imports the project to the destination gitlab server at the provided namespace, or if none is provided, the user's local projects.
 
 # Installation
