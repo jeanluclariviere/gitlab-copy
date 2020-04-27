@@ -55,6 +55,8 @@ func newGroup(uri, token, path string) (groupID string) {
 			log.Fatal(err)
 		}
 
+		defer resp.Body.Close()
+
 		bs, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatal(err)
@@ -98,16 +100,14 @@ func getParentID(uri, token, name, path string) (parentID string) {
 
 	// Perform the search
 	req, err := http.NewRequest("GET", URL, nil)
+
+	req.Header.Add("PRIVATE-TOKEN", token)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	req.Header.Add("PRIVATE-TOKEN", token)
-	resp, err = client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
+	defer resp.Body.Close()
 
 	bs, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -145,7 +145,11 @@ func scheduleExport(uri, token, pid string) (*http.Response, error) {
 
 	req.Header.Add("PRIVATE-TOKEN", token)
 	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	defer resp.Body.Close()
 	return resp, err
 }
 
@@ -170,6 +174,8 @@ func exportStatus(uri, token, pid string) (*statusResp, *http.Response, error) {
 	if err != nil {
 		return nil, resp, err
 	}
+
+	defer resp.Body.Close()
 
 	bs, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -197,6 +203,8 @@ func exportDownload(uri, token, pid, filename string) (*http.Response, error) {
 	if err != nil {
 		return resp, err
 	}
+
+	defer resp.Body.Close()
 
 	out, err := os.Create(filename)
 	if err != nil {
@@ -271,6 +279,8 @@ func importFile(uri, token, namespace, path, filename string) *http.Response {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	defer resp.Body.Close()
 
 	return resp
 }
