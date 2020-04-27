@@ -1,5 +1,3 @@
-**NOTE**: As a result of some issues with the multipartfile writer, windows is not currently a supported OS.
-
 # Summary
 Gitlab-copy is a tool to help facilitate the copying of projects from one gitlab environment to another. I decided early on to forgo the use of the `xanzy/go-gitlab` library as their import service is non-functioning.
 
@@ -9,8 +7,8 @@ Gitlab-copy works by performing the following:
 3. Downloads the project locally
 4. Imports the project to the destination gitlab server at the provided namespace, or if none is provided, the user's local projects.
 
-# Supported OS
-Linux
+# Gitlab Version
+>= Gitlab 12.9.0
 
 # Installation
 ```
