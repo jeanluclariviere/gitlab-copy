@@ -36,7 +36,9 @@ func setup() {
 
 	fmt.Print("export uri: ")
 	exportURI, _ := reader.ReadString('\n')
+	// Remove trailing lines for linux\windows
 	exportURI = strings.TrimSuffix(exportURI, "\n")
+	exportURI = strings.TrimSuffix(exportURI, "\r")
 
 	fmt.Print("export token: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
@@ -50,7 +52,9 @@ func setup() {
 
 	fmt.Print("import uri: ")
 	importURI, _ := reader.ReadString('\n')
+	// Remove trailing lines for linux\windows
 	importURI = strings.TrimSuffix(importURI, "\n")
+	importURI = strings.TrimSuffix(importURI, "\r")
 
 	fmt.Print("import token: ")
 	bytePassword, err = terminal.ReadPassword(int(syscall.Stdin))
