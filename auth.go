@@ -164,23 +164,3 @@ func exists(path string) (bool, error) {
 	}
 	return err != nil, err
 }
-
-/* func login(uri, token string) {
-
-
-	if _, err := os.Stat(fdir); err == nil {
-		// path exists
-		if uri != "" && token != "" {
-			storeCredentials(uri, token)
-			uri, token = fetchCredentials()
-		} else {
-			uri, token = fetchCredentials()
-		}
-	} else if os.IsNotExist(err) {
-		// path does not exist
-		storeCredentials(uri, token)
-		uri, token = fetchCredentials()
-	}
-
-	auth(uri, token)
-} */
