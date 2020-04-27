@@ -87,7 +87,7 @@ func storeCredentials(c credentials) error {
 	c.ExportToken = base64.StdEncoding.EncodeToString([]byte(c.ExportToken))
 	c.ImportToken = base64.StdEncoding.EncodeToString([]byte(c.ImportToken))
 
-	bs, err := json.MarshalIndent(c, "", "\t")
+	bs, err := json.Marshal(c)
 	if err != nil {
 		return err
 	}
