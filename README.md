@@ -92,7 +92,7 @@ $ gitlab-copy 100 group/subgroup
 2020/04/26 14:18:00 Import complete
 ```
 
-### Migrate to token's owner's projects (ommit the group)
+### Migrate to token's owner's projects (omit the group)
 ```
 $ gitlab-copy 100 
 2020/04/26 14:17:59 Scheduling export
