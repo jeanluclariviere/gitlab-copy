@@ -125,7 +125,7 @@ func getParentID(uri, token, name, path string) (parentID string) {
 	// Return the ID from list of responses
 	// where the requested path is equal to the groups full_path
 	for _, v := range r {
-		if v.FullPath == path {
+		if v.FullPath == strings.ToLower(path) {
 			return strconv.Itoa(v.ID)
 		}
 	}
